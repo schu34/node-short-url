@@ -1,7 +1,13 @@
 const http = require("http");
-const { readFile: _readfile } = require("fs");
-const { join } = require("path");
-const { promisify } = require("util");
+const {
+  readFile: _readfile
+} = require("fs");
+const {
+  join
+} = require("path");
+const {
+  promisify
+} = require("util");
 
 const ROOT_URL = "http://localhost:8000/";
 
@@ -9,7 +15,10 @@ const urls = require("./urls");
 const readFile = promisify(_readfile);
 
 const server = http.createServer((req, res) => {
-  const { method, url } = req;
+  const {
+    method,
+    url
+  } = req;
   console.log(method, url);
   if (method === "GET") {
     if (url === "/") {
@@ -66,6 +75,7 @@ function send404(res) {
   res.statusCode = 404;
   res.end();
 }
+
 function send400(error, res) {
   res.statusCode = 400;
   res.end(error || "bad request");
@@ -82,4 +92,4 @@ async function sendHtml(filename, res) {
   res.end(html.toString());
 }
 
-server.listen(8000);
+server.listen(process.env.PORT || 8000);

@@ -13,3 +13,7 @@ To start just run.
 npm start
 ```
 no need to `npm install`, there's 0 dependencies :D 
+
+Now you can visit http://localhost:8000/ and start shortening all the urls.
+
+

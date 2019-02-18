@@ -9,7 +9,7 @@ const {
   promisify
 } = require("util");
 
-const ROOT_URL = "http://localhost:8000/";
+const ROOT_URL = process.env.NODE_ENV === "production" ? 'https://schurl.herokuapp.com/' : "http://localhost:8000/";
 
 const urls = require("./urls");
 const readFile = promisify(_readfile);

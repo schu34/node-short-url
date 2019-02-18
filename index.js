@@ -1,75 +1,19 @@
 const http = require("http");
 const {
-  readFile: _readfile
+  readFile: _readfile,
 } = require("fs");
 const {
-  join
+  join,
 } = require("path");
 const {
-  promisify
+  promisify,
 } = require("util");
 
-const ROOT_URL = process.env.SHORT_URL || 'http://localhost:8000';
-
 const urls = require("./urls");
+
 const readFile = promisify(_readfile);
+const ROOT_URL = process.env.SHORT_URL || "http://localhost:8000/";
 
-const server = http.createServer((req, res) => {
-  const {
-    method,
-    url
-  } = req;
-  console.log(method, url);
-  if (method === "GET") {
-    if (url === "/") {
-      sendHtml("index.html", res);
-    } else {
-      if (url.split("/").length > 2) {
-        send404(res);
-      } else {
-        const urlToRedirectTo = urls.retrieve(url.split("/")[1].split("?")[0]);
-        if (urlToRedirectTo) {
-          res.statusCode = 302;
-          res.setHeader("Location", urlToRedirectTo);
-          res.end();
-        } else {
-          send404(res);
-        }
-      }
-    }
-    // return res.end("GET " + url);
-  } else if (method === "POST") {
-    const bodydata = [];
-    req.on("data", d => {
-      bodydata.push(d.toString());
-      // console.log(d, "\n\n");
-    });
-    req.on("end", () => {
-      const body = bodydata.reduce((a, b) => a + b);
-      console.log(body);
-      const formdata = body.split("=");
-      if (formdata.length !== 2 || formdata[0] !== "url") {
-        send400("invalid form data", res);
-      }
-      console.log(formdata);
-
-      let bodyUrl;
-      try {
-        bodyUrl = new URL(decodeURIComponent(formdata[1]));
-      } catch (e) {
-        send400(e.message, res);
-      }
-
-      const shortname = urls.store(bodyUrl.href);
-      const newurl = ROOT_URL + shortname;
-      console.log(newurl);
-
-      return res.end(`<a href="${newurl}">${newurl}</a>`);
-    });
-  } else {
-    res.end("ERROR");
-  }
-});
 
 function send404(res) {
   res.statusCode = 404;
@@ -91,5 +35,60 @@ async function sendHtml(filename, res) {
   res.setHeader("Content-Type", "text/html");
   res.end(html.toString());
 }
+
+async function getRequestBody(req) {
+  return new Promise((resolve, reject) => {
+    const bodydata = [];
+    req.on("data", (d) => {
+      bodydata.push(d.toString());
+    });
+    req.on("end", () => {
+      resolve(bodydata.reduce((a, b) => a + b, ""));
+    });
+    req.on("error", reject);
+  });
+}
+const server = http.createServer(async (req, res) => {
+  const {
+    method,
+    url,
+  } = req;
+  if (method === "GET") {
+    if (url === "/") {
+      return sendHtml("index.html", res);
+    }
+    if (url.split("/").length > 2) {
+      return send404(res);
+    }
+    const urlToRedirectTo = urls.retrieve(url.split("/")[1].split("?")[0]);
+    if (urlToRedirectTo) {
+      res.statusCode = 302;
+      res.setHeader("Location", urlToRedirectTo);
+      res.end();
+    } else {
+      send404(res);
+    }
+  }
+  if (method === "POST") {
+    const body = await getRequestBody(req);
+    const formdata = body.split("=");
+    if (formdata.length !== 2 || formdata[0] !== "url") {
+      return send400("invalid form data", res);
+    }
+
+    let bodyUrl;
+    try {
+      bodyUrl = new URL(decodeURIComponent(formdata[1]));
+    } catch (e) {
+      send400(e.message, res);
+    }
+
+    const shortname = urls.store(bodyUrl.href);
+    const newurl = ROOT_URL + shortname;
+
+    return res.end(`<a href="${newurl}">${newurl}</a>`);
+  }
+  return res.end("ERROR");
+});
 
 server.listen(process.env.PORT || 8000);
